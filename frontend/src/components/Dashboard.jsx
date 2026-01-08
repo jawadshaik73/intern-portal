@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
+
+
 const Dashboard = () => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -12,7 +14,8 @@ const Dashboard = () => {
 
   const fetchUserData = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/user/1');
+      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+      const response = await axios.get('/api/user/1');
       setUserData(response.data);
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -30,7 +33,8 @@ const Dashboard = () => {
 
   const handleDonate = async () => {
     try {
-      const response = await axios.put('http://localhost:5000/api/user/1/donate', {
+      const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5000';
+      const response = await axios.put('/api/user/1/donate', {
         amount: 100
       });
       if (response.data.success) {

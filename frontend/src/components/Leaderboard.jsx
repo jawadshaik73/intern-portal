@@ -4,6 +4,7 @@ import axios from 'axios';
 
 const Leaderboard = () => {
   const [leaderboardData, setLeaderboardData] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchLeaderboard();
@@ -11,7 +12,7 @@ const Leaderboard = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/leaderboard');
+      const response = await axios.get('/api/leaderboard');
       setLeaderboardData(response.data);
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -23,39 +24,37 @@ const Leaderboard = () => {
         { name: "John Doe", donations: 750, referrals: 4 },
         { name: "Jane Smith", donations: 500, referrals: 3 }
       ]);
+    } finally {
+      setLoading(false);
     }
   };
 
+  if (loading) return <div className="loading">Loading...</div>;
+
   return (
     <div className="leaderboard">
-      <header className="leaderboard-header">
-        <h1>Top Performers</h1>
+      <div className="leaderboard-header">
+        <h1>Intern Leaderboard</h1>
         <Link to="/dashboard" className="btn-back">← Back to Dashboard</Link>
-      </header>
+      </div>
 
       <div className="leaderboard-table">
         <table>
           <thead>
             <tr>
               <th>Rank</th>
-              <th>Name</th>
+              <th>Intern Name</th>
               <th>Donations Raised</th>
               <th>Referrals</th>
-              <th>Status</th>
             </tr>
           </thead>
           <tbody>
-            {leaderboardData.map((person, index) => (
-              <tr key={index} className={index < 3 ? `rank-${index + 1}` : ''}>
+            {leaderboardData.map((user, index) => (
+              <tr key={index} className={`rank-${index + 1}`}>
                 <td className="rank">#{index + 1}</td>
-                <td className="name">{person.name}</td>
-                <td className="donations">${person.donations.toLocaleString()}</td>
-                <td className="referrals">{person.referrals}</td>
-                <td>
-                  <span className={`status ${index < 3 ? 'active' : 'pending'}`}>
-                    {index < 3 ? 'Top Performer' : 'Active'}
-                  </span>
-                </td>
+                <td className="name">{user.name}</td>
+                <td className="donations">${user.donations.toLocaleString()}</td>
+                <td className="referrals">{user.referrals}</td>
               </tr>
             ))}
           </tbody>
@@ -63,12 +62,11 @@ const Leaderboard = () => {
       </div>
 
       <div className="leaderboard-notes">
-        <h3>📊 Monthly Leaderboard</h3>
-        <p>Top 3 performers get special rewards at the end of the month!</p>
+        <h3>Top Performers Rewards</h3>
         <div className="rewards-list">
-          <p>🏆 1st Place: Paid Internship Offer</p>
-          <p>🥈 2nd Place: $500 Bonus</p>
-          <p>🥉 3rd Place: Swag Package</p>
+          <p>Top 3 interns get a paid internship opportunity.</p>
+          <p>Raise $1000+ to unlock the mentorship program.</p>
+          <p>Refer 10+ friends to get exclusive swag.</p>
         </div>
       </div>
     </div>

@@ -1,68 +1,65 @@
 const express = require('express');
 const cors = require('cors');
+const mongoose = require('mongoose');
 require('dotenv').config();
+let MongoMemoryServer;
+try {
+  MongoMemoryServer = require('mongodb-memory-server').MongoMemoryServer;
+} catch (e) {
+  console.log('mongodb-memory-server not found, skipping in-memory fallback');
+}
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Dummy user data
-const users = [
-  {
-    id: 1,
-    name: "Alex Johnson",
-    email: "alex@example.com",
-    referralCode: "ALEX2025",
-    totalDonations: 1250,
-    rewards: ["Bronze Badge", "Early Access", "Mentor Session"]
-  },
-  {
-    id: 2,
-    name: "Sam Wilson",
-    email: "sam@example.com",
-    referralCode: "SAM2025",
-    totalDonations: 2800,
-    rewards: ["Gold Badge", "Swag Pack", "Conference Ticket", "Mentor Session"]
-  }
-];
+// Database Connection
+const connectDB = async () => {
+  const mongoUri = process.env.MONGO_URI || 'mongodb://localhost:27017/intern-portal';
 
-// Leaderboard data
-const leaderboard = [
-  { name: "Sam Wilson", donations: 2800, referrals: 12 },
-  { name: "Alex Johnson", donations: 1250, referrals: 8 },
-  { name: "Taylor Swift", donations: 950, referrals: 5 },
-  { name: "John Doe", donations: 750, referrals: 4 },
-  { name: "Jane Smith", donations: 500, referrals: 3 }
-];
+  try {
+    // Try connecting to local MongoDB first
+    await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 5000 });
+    console.log('MongoDB Connected (Local)');
+  } catch (err) {
+    console.log('Local MongoDB connection failed/timeout.');
+
+    if (MongoMemoryServer) {
+      console.log('Attempting to start in-memory database fallback...');
+      try {
+        const mongod = await MongoMemoryServer.create();
+        const uri = mongod.getUri();
+        await mongoose.connect(uri);
+        console.log('MongoDB Connected (In-Memory Fallback)');
+        console.log('NOTE: Data will be lost when server restarts.');
+      } catch (memErr) {
+        console.error('Failed to start in-memory database:', memErr);
+      }
+    } else {
+      console.error('Please ensure MongoDB is running or install mongodb-memory-server.');
+    }
+  }
+};
+
+connectDB();
 
 // Routes
-app.get('/api/user/:id', (req, res) => {
-  const userId = parseInt(req.params.id);
-  const user = users.find(u => u.id === userId) || users[0];
-  res.json(user);
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/internships', require('./routes/internships'));
+app.use('/api/applications', require('./routes/applications'));
+
+// Basic Route
+app.get('/', (req, res) => {
+  res.send('Intern Portal API Running');
 });
 
-app.get('/api/leaderboard', (req, res) => {
-  res.json(leaderboard);
-});
-
-// Update donations
-app.put('/api/user/:id/donate', (req, res) => {
-  const userId = parseInt(req.params.id);
-  const { amount } = req.body;
-  
-  const userIndex = users.findIndex(u => u.id === userId);
-  if (userIndex !== -1) {
-    users[userIndex].totalDonations += amount;
-    res.json({ 
-      success: true, 
-      newTotal: users[userIndex].totalDonations 
-    });
-  } else {
-    res.status(404).json({ error: 'User not found' });
-  }
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).send('Something broke!');
 });
 
 app.listen(PORT, () => {
